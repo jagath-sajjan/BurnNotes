@@ -4,19 +4,89 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
     <title>BurnNotes</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/assets/style.css" />
   </head>
   <body>
     <main class="desktop">
-      <section class="window">
-        <h1 class="title-bar">BurnNotes</h1>
+      <section class="window" aria-labelledby="window-title">
+        <h1 class="title-bar" id="window-title">
+          <span class="title-text">BurnNotes</span>
+          <a class="close" href="/" aria-label="Close">x</a>
+        </h1>
+
         <div class="window-body">
-          <p>Reader arrives in stage 5.</p>
+          <div id="gate">
+            <p class="intro">
+              A note is waiting. It will self destruct after you open it.
+            </p>
+            <p class="fineprint">
+              Opening destroys it on the server. There is no second copy and no
+              undo.
+            </p>
+
+            <button type="button" id="burn-button" class="button primary">
+              Open &amp; Burn
+            </button>
+
+            <p id="gate-error" class="message" role="status" aria-live="polite"></p>
+          </div>
+
+          <div id="reveal" hidden>
+            <pre id="note-text" class="note-text"></pre>
+
+            <div id="read-error" class="message" role="status" aria-live="polite" hidden>
+              This note could not be decrypted. The link key is wrong or the
+              note was damaged. It has already been destroyed on the server.
+            </div>
+
+            <div id="progress" class="progress-block">
+              <pre id="flame" class="flame" aria-hidden="true"></pre>
+              <p id="progress-label" class="progress-label">DELETING...</p>
+              <div
+                id="progress-fill"
+                class="progress-fill"
+                role="progressbar"
+                aria-label="Deleting note"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              ></div>
+            </div>
+
+            <div id="burned-notice" class="burned-notice" hidden>
+              <pre class="flame-static" aria-hidden="true">
+   /|\
+  / | \
+ /  |  \
+(   ^   )
+ \_____/</pre
+              >
+              <p class="burned-line">Note burned.</p>
+            </div>
+
+            <button type="button" id="done-button" class="button" hidden>
+              Write your own
+            </button>
+          </div>
+        </div>
+
+        <div class="status-bar">
+          <span class="status-cell grow">Ready</span>
+          <span class="status-cell">Notes burned: <span id="burned">000000</span></span>
+        </div>
+
+        <div class="window-footer">
+          <button type="button" id="sound-toggle" class="link-button" aria-pressed="false">
+            Sound: off
+          </button>
+          <span class="spacer"></span>
+          <span class="badge">Best viewed in Netscape Navigator 4.0</span>
         </div>
       </section>
     </main>
-    <script type="module" src="/assets/app.js"></script>
+
+    <script type="module" src="/assets/read.js"></script>
   </body>
 </html>

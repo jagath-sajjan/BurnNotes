@@ -4,18 +4,39 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
     <title>BurnNotes</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/assets/style.css" />
   </head>
   <body>
     <main class="desktop">
-      <section class="window">
-        <h1 class="title-bar">BurnNotes</h1>
+      <section class="window" aria-labelledby="window-title">
+        <h1 class="title-bar" id="window-title">
+          <span class="title-text">BurnNotes</span>
+          <a class="close" href="/" aria-label="Close">x</a>
+        </h1>
+
         <div class="window-body">
-          <p>This note has been burned.</p>
+          <p class="burned-line">This note has been burned.</p>
+          <p class="fineprint">
+            It was destroyed the first time it was opened, or it expired. Either
+            way there is nothing left to read.
+          </p>
+          <a class="button" href="/">Write a new note</a>
+        </div>
+
+        <div class="status-bar">
+          <span class="status-cell grow">404</span>
+          <span class="status-cell">Notes burned: <span id="burned">000000</span></span>
+        </div>
+
+        <div class="window-footer">
+          <span class="badge">Best viewed in Netscape Navigator 4.0</span>
         </div>
       </section>
     </main>
+
+    <script type="module" src="/assets/counter.js"></script>
   </body>
 </html>
