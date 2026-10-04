@@ -103,11 +103,12 @@ Confirm which, without guessing:
 
     curl -s https://YOUR_HOST/api/health
 
-    {"ok":false,"database":"unavailable"}   the database is the problem
+    {"ok":false,"database":"unavailable"}
 
-If the body of the response is plain text starting with `BurnNotes cannot reach
-its database`, the function is healthy and the database is not. It names the
-failure and gives the exact command to run.
+That health endpoint always answers with json and a status code, so a platform
+probe never depends on parsing prose. Every other path answers with a plain
+text explanation beginning `BurnNotes cannot reach its database`, which names
+the failure and gives the exact command to run.
 
 Token shaped strings are stripped from any message this app emits, so pasting
 a diagnostic into an issue will not leak the token.

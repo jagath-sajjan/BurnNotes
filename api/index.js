@@ -49,6 +49,20 @@ async function ensureDatabase() {
   }
 }
 
+// A platform probe wants a status code and json, not prose. Only human facing
+// paths get the explanation.
+function isHealthCheck(pathname) {
+  return pathname === '/api/health' || pathname === '/api/health/'
+}
+
+function sendHealthFailure(res) {
+  const body = JSON.stringify({ ok: false, database: 'unavailable' })
+  res.statusCode = 503
+  res.setHeader('content-type', 'application/json; charset=utf-8')
+  res.setHeader('cache-control', 'no-store, max-age=0')
+  res.end(body)
+}
+
 function sendDiagnostic(res, error) {
   const body = `${diagnostic(error)}\n`
   res.statusCode = isCredentialProblem(error) ? 401 : 503
@@ -61,7 +75,15 @@ function sendDiagnostic(res, error) {
 export default async function handler(req, res) {
   const error = await ensureDatabase()
   if (error !== null) {
-    sendDiagnostic(res, error)
+    let pathname = '/'
+    try {
+      pathname = new URL(req.url, 'http://localhost').pathname
+    } catch {
+      // Malformed url, fall through to the diagnostic.
+    }
+
+    if (isHealthCheck(pathname)) sendHealthFailure(res)
+    else sendDiagnostic(res, error)
     return
   }
   listener(req, res)
