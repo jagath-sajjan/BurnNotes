@@ -1,0 +1,23 @@
+{
+  "dependencies": {
+    "@hono/node-server": "^2.1.3",
+    "@libsql/client": "^0.18.0",
+    "hono": "^4.13.13"
+  },
+  "name": "burnnotes",
+  "version": "0.1.0",
+  "description": "Burn after reading notes, encrypted in the browser",
+  "type": "module",
+  "license": "GPL-3.0",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test test/",
+    "dev:local": "DATABASE_URL=file:local.db node --watch src/server.js",
+    "start:local": "DATABASE_URL=file:local.db node src/server.js"
+  }
+}

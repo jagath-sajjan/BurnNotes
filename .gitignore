@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.local
+local.db
+local.db-journal
+local.db-wal
+local.db-shm
+data/
+*.log
+.DS_Store
+.vercel

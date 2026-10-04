@@ -1,0 +1,61 @@
+:root {
+  --desktop: #008080;
+  --panel: #c0c0c0;
+  --bevel-light: #ffffff;
+  --bevel-dark: #000000;
+  --bevel-mid: #808080;
+  --titlebar: #000080;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--desktop);
+  font-family: 'Times New Roman', Times, serif;
+  color: #000000;
+}
+
+.desktop {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 8px;
+}
+
+.window {
+  width: min(640px, 100%);
+  background: var(--panel);
+  border: 2px solid;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+  box-shadow: 1px 1px 0 var(--bevel-mid);
+}
+
+.title-bar {
+  margin: 0;
+  padding: 3px 4px;
+  background: var(--titlebar);
+  color: #ffffff;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 1.4;
+}
+
+.window-body {
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.window-body p {
+  margin: 0;
+}
