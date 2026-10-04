@@ -1,0 +1,259 @@
+import assert from 'node:assert/strict'
+import { after, before, describe, it } from 'node:test'
+import { unlinkSync } from 'node:fs'
+
+const DB_FILE = 'test-api.db'
+const BASE = 'http://localhost'
+
+process.env.DATABASE_URL = `file:${DB_FILE}`
+process.env.TURSO_AUTH_TOKEN = ''
+process.env.TRUST_PROXY = ''
+
+const { initDatabase, db, closeDatabase } = await import('../src/db.js')
+const { createApp } = await import('../src/app.js')
+const { encryptNote, generateIv, generateNoteKey, bytesToBase64Url } = await import(
+  '../public/assets/crypto.js'
+)
+
+const app = createApp()
+
+const NOT_FOUND_BODY = '{"error":"not_found"}'
+
+function call(path, init) {
+  return app.request(BASE + path, init)
+}
+
+function postJson(path, body) {
+  return call(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+
+async function makeNote(plaintext = 'hunter2', ttl = '1h') {
+  const key = generateNoteKey()
+  const iv = generateIv()
+  const ciphertext = await encryptNote(plaintext, key, iv)
+  const response = await postJson('/api/notes', {
+    ciphertext,
+    iv: bytesToBase64Url(iv),
+    ttl,
+  })
+  assert.equal(response.status, 201)
+  const { id } = await response.json()
+  return { id, key, ciphertext, iv: bytesToBase64Url(iv) }
+}
+
+function readNote(id) {
+  return call(`/api/notes/${id}/read`, { method: 'POST' })
+}
+
+before(async () => {
+  await initDatabase()
+})
+
+after(() => {
+  closeDatabase()
+  try {
+    unlinkSync(DB_FILE)
+  } catch {
+    // Already gone.
+  }
+})
+
+describe('POST /api/notes', () => {
+  it('creates a note and returns a 22 character id', async () => {
+    const { id } = await makeNote()
+    assert.match(id, /^[A-Za-z0-9_-]{22}$/)
+  })
+
+  it('gives two notes different ids', async () => {
+    const first = await makeNote()
+    const second = await makeNote()
+    assert.notEqual(first.id, second.id)
+  })
+
+  it('rejects an oversized ciphertext with 413', async () => {
+    const response = await postJson('/api/notes', {
+      ciphertext: 'A'.repeat(21849),
+      iv: 'a'.repeat(16),
+      ttl: '1h',
+    })
+    assert.equal(response.status, 413)
+    assert.deepEqual(await response.json(), { error: 'note_too_large' })
+  })
+
+  it('accepts a ciphertext at the size limit', async () => {
+    const response = await postJson('/api/notes', {
+      ciphertext: 'A'.repeat(21848),
+      iv: 'a'.repeat(16),
+      ttl: '1h',
+    })
+    assert.equal(response.status, 201)
+  })
+
+  it('rejects an unknown ttl', async () => {
+    const response = await postJson('/api/notes', {
+      ciphertext: 'AAAA',
+      iv: 'a'.repeat(16),
+      ttl: '99y',
+    })
+    assert.equal(response.status, 400)
+  })
+
+  it('rejects a short iv', async () => {
+    const response = await postJson('/api/notes', {
+      ciphertext: 'AAAA',
+      iv: 'short',
+      ttl: '1h',
+    })
+    assert.equal(response.status, 400)
+  })
+
+  it('rejects ciphertext that is not base64url', async () => {
+    const response = await postJson('/api/notes', {
+      ciphertext: 'has spaces and +plus/',
+      iv: 'a'.repeat(16),
+      ttl: '1h',
+    })
+    assert.equal(response.status, 400)
+  })
+
+  it('rejects an empty body', async () => {
+    const response = await call('/api/notes', { method: 'POST' })
+    assert.equal(response.status, 400)
+  })
+
+  it('rejects a body that is not an object', async () => {
+    const response = await postJson('/api/notes', ['nope'])
+    assert.equal(response.status, 400)
+  })
+
+  it('rejects an oversized body before touching the database', async () => {
+    const response = await call('/api/notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ciphertext: 'A'.repeat(200000), iv: 'a'.repeat(16), ttl: '1h' }),
+    })
+    assert.equal(response.status, 413)
+  })
+})
+
+describe('POST /api/notes/:id/read', () => {
+  it('returns the ciphertext and iv on the first read', async () => {
+    const { id, ciphertext, iv } = await makeNote('first read wins')
+    const response = await readNote(id)
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), { ciphertext, iv })
+  })
+
+  it('returns 404 on the second read', async () => {
+    const { id } = await makeNote()
+    await readNote(id)
+    const second = await readNote(id)
+    assert.equal(second.status, 404)
+    assert.equal(await second.text(), NOT_FOUND_BODY)
+  })
+
+  it('gives a byte identical body for missing, expired and already read', async () => {
+    const missing = await readNote('aaaaaaaaaaaaaaaaaaaaaa')
+    const missingBody = await missing.text()
+
+    const { id } = await makeNote()
+    await readNote(id)
+    const alreadyRead = await readNote(id)
+    const alreadyReadBody = await alreadyRead.text()
+
+    await db.execute({
+      sql: 'INSERT INTO notes (id, ciphertext, iv, created_at, expires_at) VALUES (?, ?, ?, ?, ?)',
+      args: ['bbbbbbbbbbbbbbbbbbbbbb', 'AAAA', 'a'.repeat(16), Date.now() - 7200000, Date.now() - 3600000],
+    })
+    const expired = await readNote('bbbbbbbbbbbbbbbbbbbbbb')
+    const expiredBody = await expired.text()
+
+    assert.equal(missing.status, 404)
+    assert.equal(alreadyRead.status, 404)
+    assert.equal(expired.status, 404)
+    assert.equal(missingBody, alreadyReadBody)
+    assert.equal(missingBody, expiredBody)
+  })
+
+  it('destroys the row so it cannot be read again', async () => {
+    const { id } = await makeNote()
+    await readNote(id)
+    const remaining = await db.execute({ sql: 'SELECT count(*) AS c FROM notes WHERE id = ?', args: [id] })
+    assert.equal(remaining.rows[0].c, 0)
+  })
+
+  it('returns 404 for a malformed id', async () => {
+    const response = await readNote('not-a-valid-id')
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), NOT_FOUND_BODY)
+  })
+
+  it('never returns the note over GET', async () => {
+    const { id } = await makeNote()
+    const response = await call(`/api/notes/${id}/read`)
+    assert.equal(response.status, 404)
+    const after = await readNote(id)
+    assert.equal(after.status, 200)
+  })
+
+  it('only one of two concurrent reads succeeds', async () => {
+    const { id } = await makeNote('only once')
+    const results = await Promise.all([readNote(id), readNote(id)])
+    const statuses = results.map((response) => response.status).sort()
+    assert.deepEqual(statuses, [200, 404])
+  })
+})
+
+describe('GET /api/stats', () => {
+  it('counts burned notes', async () => {
+    const before = await (await call('/api/stats')).json()
+    const { id } = await makeNote()
+    await readNote(id)
+    const after = await (await call('/api/stats')).json()
+    assert.equal(after.burned, before.burned + 1)
+  })
+
+  it('does not count a failed read', async () => {
+    const before = await (await call('/api/stats')).json()
+    await readNote('cccccccccccccccccccccc')
+    const after = await (await call('/api/stats')).json()
+    assert.equal(after.burned, before.burned)
+  })
+})
+
+describe('security headers', () => {
+  it('sets the policy on api responses', async () => {
+    const response = await call('/api/stats')
+    assert.match(response.headers.get('content-security-policy'), /default-src 'self'/)
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer')
+    assert.equal(response.headers.get('x-content-type-options'), 'nosniff')
+    assert.equal(response.headers.get('x-frame-options'), 'DENY')
+    assert.equal(response.headers.get('cache-control'), 'no-store, max-age=0')
+  })
+
+  it('sets the policy on note pages', async () => {
+    const response = await call('/n/aaaaaaaaaaaaaaaaaaaaaa')
+    assert.equal(response.headers.get('cache-control'), 'no-store, max-age=0')
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer')
+  })
+})
+
+describe('database contents', () => {
+  it('stores no plaintext and no key material', async () => {
+    const secret = 'PLAINTEXT_CANARY_9f2b'
+    const { id, ciphertext, iv } = await makeNote(secret)
+    const row = await db.execute({
+      sql: 'SELECT ciphertext, iv FROM notes WHERE id = ?',
+      args: [id],
+    })
+    const stored = row.rows[0]
+    assert.equal(stored.ciphertext, ciphertext)
+    assert.equal(stored.iv, iv)
+    assert.equal(JSON.stringify(stored).includes(secret), false)
+    assert.equal(JSON.stringify(stored).includes('AES'), false)
+  })
+})
