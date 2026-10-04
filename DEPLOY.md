@@ -82,6 +82,43 @@ uses Turso and the file database only exists for local development.
 6. Cold starts re-run the schema statements. They are all `IF NOT EXISTS`, so
    this is safe but does cost a few queries per cold start.
 
+## When the page says FUNCTION_INVOCATION_FAILED
+
+Vercel answers `500 FUNCTION_INVOCATION_FAILED` when the function throws while
+it is loading. BurnNotes opens with a plain text explanation instead of that
+error, so if you see the Vercel page at all, the failure is somewhere else.
+
+That error almost always means one of two things.
+
+1. **The database token is dead.** Turso signs tokens with a key that belongs
+   to one database. Recreating a database replaces that key, so every token
+   minted before the recreation is rejected with a 401, even though the token
+   itself still looks well formed. Mint a new one and redeploy.
+
+2. **The environment variables are missing or belong to another database.**
+   `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` must come from the same
+   database. A token from a different database fails the same way.
+
+Confirm which, without guessing:
+
+    curl -s https://YOUR_HOST/api/health
+
+    {"ok":false,"database":"unavailable"}   the database is the problem
+
+If the body of the response is plain text starting with `BurnNotes cannot reach
+its database`, the function is healthy and the database is not. It names the
+failure and gives the exact command to run.
+
+Token shaped strings are stripped from any message this app emits, so pasting
+a diagnostic into an issue will not leak the token.
+
+To replace the token without touching the code:
+
+    npx @turso/cli db tokens create burnnotes-jagath-sajjan --permission rw
+
+Paste the new value into `TURSO_AUTH_TOKEN` in the dashboard and redeploy.
+Environment changes need a fresh deployment, a rebuild is not enough.
+
 ## Checking a deployment
 
     curl -sI https://YOUR_HOST/ | grep -iE 'content-security|referrer|cache-control'

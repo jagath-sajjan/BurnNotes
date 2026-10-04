@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { isDatabaseReady } from '../db.js'
 import { clientIp } from '../ip.js'
 import { isValidNoteId } from '../ids.js'
 import {
@@ -34,7 +35,15 @@ function noteIdFrom(ctx) {
 export function apiRoutes() {
   const app = new Hono()
 
-  app.get('/api/health', (ctx) => ctx.json({ ok: true }))
+  // Honest health. A bare ok while the database is unreachable is how a broken
+  // deploy looks healthy to a platform probe.
+  app.get('/api/health', (ctx) => {
+    const database = isDatabaseReady()
+    return ctx.json(
+      { ok: database, database: database ? 'ready' : 'unavailable' },
+      database ? 200 : 503,
+    )
+  })
 
   app.get('/api/stats', async (ctx) => ctx.json({ burned: await readBurnedCount() }))
 

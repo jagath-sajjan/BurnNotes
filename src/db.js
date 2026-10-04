@@ -23,13 +23,21 @@ export const SCHEMA_STATEMENTS = [
   `INSERT OR IGNORE INTO stats (key, value) VALUES ('burned', 0)`,
 ]
 
-// Older databases predate the burn_mode column. CREATE TABLE IF NOT EXISTS
-// will not add it, so check and alter.
+// Older databases predate the burn_mode column and CREATE TABLE IF NOT EXISTS
+// will not add it. ALTER and swallow the duplicate, rather than asking
+// PRAGMA table_info, which remote libSQL does not answer consistently.
 async function ensureBurnModeColumn() {
-  const info = await db.execute('PRAGMA table_info(notes)')
-  const present = info.rows.some((row) => row.name === 'burn_mode')
-  if (present) return
-  await db.execute("ALTER TABLE notes ADD COLUMN burn_mode TEXT NOT NULL DEFAULT 'auto'")
+  try {
+    await db.execute("ALTER TABLE notes ADD COLUMN burn_mode TEXT NOT NULL DEFAULT 'auto'")
+  } catch (error) {
+    if (!/duplicate column name/i.test(String(error?.message))) throw error
+  }
+}
+
+let ready = false
+
+export function isDatabaseReady() {
+  return ready
 }
 
 export async function initDatabase() {
@@ -38,7 +46,9 @@ export async function initDatabase() {
       await db.execute(statement)
     }
     await ensureBurnModeColumn()
+    ready = true
   } catch (error) {
+    ready = false
     throw new Error(
       `Database init failed. ${error.message}\n` +
         'For a remote libsql url, confirm TURSO_DATABASE_URL and TURSO_AUTH_TOKEN belong to the ' +

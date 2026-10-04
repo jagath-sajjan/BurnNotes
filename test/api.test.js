@@ -353,6 +353,15 @@ describe('POST /api/notes/:id/peek', () => {
 })
 
 
+describe('GET /api/health', () => {
+  it('reports the database as ready once initialised', async () => {
+    const response = await call('/api/health')
+    assert.equal(response.status, 200)
+    const body = await response.json()
+    assert.deepEqual(body, { ok: true, database: 'ready' })
+  })
+})
+
 describe('security headers', () => {
   it('sets the policy on api responses', async () => {
     const response = await call('/api/stats')
