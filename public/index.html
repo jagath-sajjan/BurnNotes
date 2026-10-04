@@ -12,12 +12,51 @@
   <body>
     <div id="boot" class="boot">
       <div class="boot-brand">
-        <span class="boot-flag" aria-hidden="true">
-          <i class="quad quad-1"></i>
-          <i class="quad quad-2"></i>
-          <i class="quad quad-3"></i>
-          <i class="quad quad-4"></i>
-        </span>
+        <svg class="boot-logo" viewBox="0 0 120 136" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="bn-paper" x1="0" y1="0" x2="0.35" y2="1">
+              <stop offset="0" stop-color="#ffffff" />
+              <stop offset="1" stop-color="#ccd9f0" />
+            </linearGradient>
+            <linearGradient id="bn-fire" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0" stop-color="#ff4500" />
+              <stop offset="0.55" stop-color="#ff8a1f" />
+              <stop offset="1" stop-color="#ffd23f" />
+            </linearGradient>
+            <radialGradient id="bn-halo" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0" stop-color="#ffb03a" stop-opacity="0.8" />
+              <stop offset="1" stop-color="#ffb03a" stop-opacity="0" />
+            </radialGradient>
+          </defs>
+
+          <circle cx="60" cy="86" r="44" fill="url(#bn-halo)" />
+
+          <path
+            d="M28 10 h46 l16 16 v56 c-7 4-10 12-18 13-9 1-13-6-22-4-10 2-14-7-22-9 z"
+            fill="url(#bn-paper)"
+          />
+          <path d="M74 10 l16 16 h-16 z" fill="#9fb4d6" />
+          <g fill="#8ea4c6">
+            <rect x="40" y="34" width="34" height="4.5" rx="2.25" />
+            <rect x="40" y="45" width="38" height="4.5" rx="2.25" />
+            <rect x="40" y="56" width="24" height="4.5" rx="2.25" />
+          </g>
+
+          <path
+            d="M62 130 C42 130 30 114 36 97 C39 87 49 83 51 73 C53 63 47 57 49 48 C64 59 73 73 71 86 C76 81 79 72 78 63 C92 78 94 98 86 114 C81 124 74 130 62 130 Z"
+            fill="url(#bn-fire)"
+          />
+          <path
+            d="M62 125 C52 125 45 116 48 107 C50 100 57 97 58 89 C60 81 56 76 57 70 C66 78 70 88 68 97 C73 92 74 86 74 80 C80 90 79 102 73 112 C70 120 67 125 62 125 Z"
+            fill="#ffe57a"
+          />
+
+          <g fill="#ffcf5c">
+            <circle cx="86" cy="36" r="3.5" />
+            <circle cx="97" cy="52" r="2.5" />
+            <circle cx="33" cy="44" r="2.5" />
+          </g>
+        </svg>
         <span class="boot-wordmark">BurnNotes</span>
         <span class="boot-edition">sealed notes edition</span>
       </div>

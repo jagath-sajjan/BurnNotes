@@ -671,10 +671,21 @@ textarea::placeholder {
 }
 
 .start-flame {
-  width: 12px;
+  width: 11px;
   height: 14px;
-  background: linear-gradient(180deg, var(--ember) 0%, var(--ember-deep) 100%);
-  clip-path: polygon(50% 0%, 78% 34%, 66% 40%, 88% 66%, 50% 100%, 12% 66%, 34% 40%, 22% 34%);
+  border-radius: 50% 50% 46% 46% / 62% 62% 38% 38%;
+  background: linear-gradient(180deg, #ffd23f 0%, #ff8a1f 55%, #ff4500 100%);
+  clip-path: polygon(
+    50% 0%,
+    78% 30%,
+    66% 38%,
+    88% 62%,
+    72% 100%,
+    28% 100%,
+    12% 62%,
+    34% 38%,
+    22% 30%
+  );
 }
 
 .taskbar-sep {
@@ -735,58 +746,24 @@ textarea::placeholder {
   color: #fff;
 }
 
-.boot-flag {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  width: clamp(78px, 20vw, 108px);
-  height: clamp(56px, 14vw, 76px);
-  margin-bottom: 20px;
-  transform: perspective(240px) rotateY(-14deg) rotateZ(-2deg);
-  filter: drop-shadow(0 8px 12px rgba(0, 18, 55, 0.55));
-}
-
-/* One gradient sweep across all four panes so light looks like it comes from
-   the same place. */
-.boot-flag .quad {
+.boot-logo {
   display: block;
-  background-blend-mode: normal;
+  width: clamp(86px, 22vw, 126px);
+  height: auto;
+  margin-bottom: 18px;
+  overflow: visible;
+  filter: drop-shadow(0 10px 14px rgba(0, 18, 55, 0.5));
+  animation: logo-float 3.4s ease-in-out infinite;
 }
 
-.quad-1 {
-  background-image: linear-gradient(148deg, #ff8a5e 0%, #f35325 55%, #d33a12 100%);
-  clip-path: polygon(0 22%, 100% 2%, 100% 78%, 0 98%);
-}
-
-.quad-2 {
-  background-image: linear-gradient(148deg, #b6e05c 0%, #81bc06 55%, #5f8c04 100%);
-  clip-path: polygon(0 2%, 100% 22%, 100% 98%, 0 78%);
-}
-
-.quad-3 {
-  background-image: linear-gradient(148deg, #6cd4ff 0%, #05a6f0 55%, #0287c9 100%);
-  clip-path: polygon(0 22%, 100% 2%, 100% 78%, 0 98%);
-}
-
-.quad-4 {
-  background-image: linear-gradient(148deg, #ffdf8a 0%, #ffba08 55%, #dd9400 100%);
-  clip-path: polygon(0 2%, 100% 22%, 100% 98%, 0 78%);
-}
-
-/* Glossy pane over the whole flag. */
-.boot-flag::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    118deg,
-    rgba(255, 255, 255, 0.6) 0%,
-    rgba(255, 255, 255, 0.18) 34%,
-    rgba(255, 255, 255, 0) 56%,
-    rgba(0, 20, 60, 0.22) 100%
-  );
-  pointer-events: none;
+@keyframes logo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
 .boot-wordmark {
@@ -937,6 +914,10 @@ textarea::placeholder {
 
   textarea::placeholder {
     border-right: 2px solid #6a6a6a;
+  }
+
+  .boot-logo {
+    animation: none;
   }
 
   .boot-loading-word::after {
