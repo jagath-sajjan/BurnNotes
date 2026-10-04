@@ -1,7 +1,14 @@
 import { Hono } from 'hono'
 import { clientIp } from '../ip.js'
 import { isValidNoteId } from '../ids.js'
-import { burnNote, createNote, purgeExpired, readBurnedCount } from '../notes.js'
+import {
+  burnNote,
+  createNote,
+  describeNote,
+  peekNote,
+  purgeExpired,
+  readStats,
+} from '../notes.js'
 import { createRateLimiter } from '../rate-limit.js'
 import { parseCreateBody } from '../validation.js'
 
@@ -10,8 +17,8 @@ const HOUR_MS = 60 * 60 * 1000
 const createLimiter = createRateLimiter({ limit: 20, windowMs: HOUR_MS })
 const readLimiter = createRateLimiter({ limit: 60, windowMs: HOUR_MS })
 
-// Missing, expired and already read all produce this exact body, so a
-// caller cannot tell them apart.
+// Missing, expired, already read and not manual all produce this exact
+// body, so a caller cannot tell them apart.
 const NOT_FOUND = { error: 'not_found' }
 
 function tooMany(ctx, verdict) {
@@ -19,12 +26,17 @@ function tooMany(ctx, verdict) {
   return ctx.json({ error: 'rate_limited' }, 429)
 }
 
+function noteIdFrom(ctx) {
+  const { id } = ctx.req.param()
+  return isValidNoteId(id) ? id : null
+}
+
 export function apiRoutes() {
   const app = new Hono()
 
   app.get('/api/health', (ctx) => ctx.json({ ok: true }))
 
-  app.get('/api/stats', async (ctx) => ctx.json({ burned: await readBurnedCount() }))
+  app.get('/api/stats', async (ctx) => ctx.json(await readStats()))
 
   app.post('/api/notes', async (ctx) => {
     const verdict = createLimiter(clientIp(ctx))
@@ -51,22 +63,53 @@ export function apiRoutes() {
     return ctx.json({ id }, 201)
   })
 
+  // Tells the reader which flow to run and how long the note survives.
+  // Reveals no ciphertext and destroys nothing.
+  app.get('/api/notes/:id/expiry', async (ctx) => {
+    const verdict = readLimiter(clientIp(ctx))
+    if (!verdict.allowed) return tooMany(ctx, verdict)
+
+    const id = noteIdFrom(ctx)
+    if (id === null) return ctx.json(NOT_FOUND, 404)
+
+    const described = await describeNote(id)
+    if (described === null) return ctx.json(NOT_FOUND, 404)
+
+    return ctx.json(described)
+  })
+
+  app.post('/api/notes/:id/peek', async (ctx) => {
+    const verdict = readLimiter(clientIp(ctx))
+    if (!verdict.allowed) return tooMany(ctx, verdict)
+
+    const id = noteIdFrom(ctx)
+    if (id === null) return ctx.json(NOT_FOUND, 404)
+
+    const peeked = await peekNote(id)
+    if (peeked === null) return ctx.json(NOT_FOUND, 404)
+
+    return ctx.json(peeked)
+  })
+
   app.post('/api/notes/:id/read', async (ctx) => {
     const verdict = readLimiter(clientIp(ctx))
     if (!verdict.allowed) return tooMany(ctx, verdict)
 
-    const { id } = ctx.req.param()
-    if (!isValidNoteId(id)) {
-      return ctx.json(NOT_FOUND, 404)
-    }
+    const id = noteIdFrom(ctx)
+    if (id === null) return ctx.json(NOT_FOUND, 404)
 
     const burned = await burnNote(id)
-    if (burned === null) {
-      return ctx.json(NOT_FOUND, 404)
-    }
+    if (burned === null) return ctx.json(NOT_FOUND, 404)
 
-    return ctx.json(burned)
+    return ctx.json({ ciphertext: burned.ciphertext, iv: burned.iv, score: burned.score })
   })
 
   return app
+}
+
+// The limiters are per process. The test suite drives hundreds of requests
+// through one client, so it needs a way to start each run with empty buckets.
+export function resetApiRateLimiters() {
+  createLimiter.clear()
+  readLimiter.clear()
 }

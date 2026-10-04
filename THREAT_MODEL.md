@@ -13,8 +13,10 @@ For every live note the database contains four values and nothing else:
     iv           12 random bytes, base64url
     created_at   milliseconds
     expires_at   milliseconds
+    burn_mode    `auto` or `manual`
 
-Plus one row in `stats` holding a single integer, the number of notes burned.
+Plus one row in `stats` holding three integers: notes burned, xp earned, and
+total characters burned.
 
 ## What the server never receives
 
@@ -41,8 +43,8 @@ Honest limits of the blind store model:
    source address of both. It can tell that a person at address A handed a
    secret to a person at address B, and how long the secret sat unread. That is
    metadata, and metadata is often enough.
-3. **Volume.** The burned counter is global and public. It reveals how much
-   traffic the service handles.
+3. **Volume.** The counters are global and public. They reveal how much traffic
+   the service handles and roughly how much text it has carried.
 4. **Aggregate size and churn.** Row counts and insert rates describe usage.
 
 ## Link sharing channels
@@ -101,7 +103,18 @@ Sending a one time link is where most real leaks happen, not in the crypto.
    the per process limit multiplied by the instance count. `TRUST_PROXY` is off
    by default; turning it on is only safe when the platform strips any client
    supplied `X-Forwarded-For`.
-9. **Out of scope.** A malicious browser extension with host permissions, a
+9. **Manual notes are not destroyed on close.** A manual note stays in the
+   database until the reader burns it or `expires_at` passes. Closing the tab
+   does not burn it, which is the whole point of the mode, but it means the
+   ciphertext sits on the server longer. It is capped at 24 hours and the
+   sweeper removes it on time. Anyone who wants destruction on close must use
+   auto mode.
+10. **`peek` returns ciphertext without destroying it.** Peeking is only
+   offered on manual notes, is rate limited like a read, and hands back the
+   same opaque bytes the database already holds. It reveals nothing the
+   database does not already hold, but it does keep a note readable for as long
+   as its expiry allows.
+11. **Out of scope.** A malicious browser extension with host permissions, a
    compromised device, a hostile origin that the user grants access to, screen
    capture, and traffic analysis are all outside this design.
 
@@ -122,3 +135,19 @@ Sending a one time link is where most real leaks happen, not in the crypto.
    returns, whether or not decryption then succeeds.
 7. A strict content security policy with no inline script and no inline style
    blocks the common paths for injected script to exfiltrate the key.
+8. Auto mode only burns on load when the URL fragment is present. A link preview
+   fetches the page without the fragment, so it is refused before any request
+   is made. This is the real link preview defence, not the `POST` requirement
+   alone.
+9. `peek` on an auto note returns the same not found body as a missing note, so
+   the endpoint does not confirm that an auto note exists.
+10. Manual notes cannot be created with an expiry longer than 24 hours.
+
+## Reading speed
+
+Auto mode holds a note open before destroying it. The window is 15 seconds plus
+90 milliseconds per character, capped at 90 seconds. This is a deliberate trade:
+the original design destroyed on load, which meant a long note could be read
+only once and only if the reader was fast. The plaintext still exists only in
+one reader's browser during that window, and the server copy is deleted at the
+start of it, not at the end.

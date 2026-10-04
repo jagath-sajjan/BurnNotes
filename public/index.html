@@ -10,12 +10,41 @@
     <link rel="stylesheet" href="/assets/style.css" />
   </head>
   <body>
+    <div id="boot" class="boot">
+      <div class="boot-inner">
+        <p class="boot-title">BURNNOTES</p>
+        <div id="boot-log" class="boot-log"></div>
+        <div id="boot-bar" class="boot-bar"><span class="boot-fill"></span></div>
+      </div>
+    </div>
+
     <main class="desktop">
       <section class="window" aria-labelledby="window-title">
         <header class="title-bar">
           <h1 class="title-text" id="window-title">BurnNotes</h1>
+          <button type="button" class="widget" aria-label="Minimise" tabindex="-1">_</button>
+          <button type="button" class="widget" aria-label="Maximise" tabindex="-1">□</button>
           <a class="close" href="/" aria-label="Close">x</a>
         </header>
+
+        <nav class="menu-bar" aria-label="Main">
+          <div class="menu" data-menu>
+            <button type="button" class="menu-trigger" data-menu-trigger aria-expanded="false" aria-haspopup="true">
+              File
+            </button>
+            <div class="menu-popup" role="menu">
+              <button type="button" role="menuitem" data-command="new">New note</button>
+            </div>
+          </div>
+          <div class="menu" data-menu>
+            <button type="button" class="menu-trigger" data-menu-trigger aria-expanded="false" aria-haspopup="true">
+              View
+            </button>
+            <div class="menu-popup" role="menu">
+              <button type="button" role="menuitem" data-command="sound">Toggle sound</button>
+            </div>
+          </div>
+        </nav>
 
         <div class="window-body">
           <p class="intro">
@@ -37,11 +66,37 @@
               ></textarea>
             </div>
 
+            <fieldset class="field mode-field">
+              <legend>Burn mode</legend>
+              <div class="mode-grid">
+                <label class="mode" for="mode-auto">
+                  <input type="radio" id="mode-auto" name="burn-mode" value="auto" checked />
+                  <span class="mode-body">
+                    <span class="mode-name">Auto burn</span>
+                    <span class="mode-note">Opens and destroys itself on load.</span>
+                  </span>
+                </label>
+                <label class="mode" for="mode-manual">
+                  <input type="radio" id="mode-manual" name="burn-mode" value="manual" />
+                  <span class="mode-body">
+                    <span class="mode-name">Manual burn</span>
+                    <span class="mode-note">Waits for the reader to burn it.</span>
+                  </span>
+                </label>
+              </div>
+              <p id="manual-hint" class="hint" hidden>
+                A manual note stays on the server until the reader burns it or it
+                expires. Close the tab without burning and it still self
+                destructs.
+              </p>
+            </fieldset>
+
             <div class="field">
               <label for="note-expiry">Expires after</label>
               <select id="note-expiry" name="ttl">
-                <option value="1h">1 hour</option>
-                <option value="24h" selected>24 hours</option>
+                <option value="10m">10 minutes</option>
+                <option value="1h" selected>1 hour</option>
+                <option value="24h">24 hours</option>
                 <option value="7d">7 days</option>
               </select>
             </div>
@@ -60,14 +115,10 @@
 
             <div class="field">
               <label for="share-link">One time link</label>
-              <input
-                id="share-link"
-                type="text"
-                readonly
-                spellcheck="false"
-                autocomplete="off"
-              />
+              <input id="share-link" type="text" readonly spellcheck="false" autocomplete="off" />
             </div>
+
+            <p class="tagline">Mode: <span id="mode-summary">Auto burn</span></p>
 
             <div class="row">
               <button type="button" id="copy-button" class="button">Copy</button>
@@ -75,6 +126,21 @@
             </div>
           </div>
         </div>
+
+        <section class="xp-panel" aria-labelledby="xp-heading">
+          <h2 class="xp-heading" id="xp-heading">BurnNote XP</h2>
+          <p class="xp-line">
+            <span id="xp-value">0</span> XP
+            <span class="dot">·</span>
+            <span id="xp-level">Level 1</span>
+            <span class="dot">·</span>
+            <span id="xp-rank">Newcomer</span>
+            <span class="dot">·</span>
+            <span id="xp-chars">0 chars</span>
+          </p>
+          <div id="xp-bar" class="xp-bar"><span class="xp-fill"></span></div>
+          <p class="xp-next" id="xp-next">0 XP to Spark</p>
+        </section>
 
         <div class="status-bar">
           <span class="status-cell grow">Ready</span>
@@ -85,11 +151,49 @@
           <button type="button" id="sound-toggle" class="link-button" aria-pressed="false">
             Sound: off
           </button>
-          <span class="spacer"></span>
           <span class="badge">Best viewed in Netscape Navigator 4.0</span>
         </div>
       </section>
+
+      <div class="ticker" aria-hidden="true">
+        <div class="ticker-track">
+          <span class="ticker-text">
+            BurnNote XP rewards long secrets. Sealed in your browser. Destroyed on
+            first read. Link previews cannot burn a note. The key never reaches
+            the server. BurnNote XP rewards long secrets. Sealed in your browser.
+            Destroyed on first read. Link previews cannot burn a note. The key
+            never reaches the server.
+          </span>
+        </div>
+      </div>
     </main>
+
+    <footer class="taskbar">
+      <div class="menu start-menu" data-menu>
+        <button
+          type="button"
+          class="start-button"
+          data-menu-trigger
+          aria-expanded="false"
+          aria-haspopup="true"
+        >
+          <span class="start-flame" aria-hidden="true"></span>
+          Start
+        </button>
+        <div class="menu-popup" role="menu">
+          <button type="button" role="menuitem" data-command="new">Write a new note</button>
+          <button type="button" role="menuitem" data-command="sound">Toggle sound</button>
+        </div>
+      </div>
+      <div class="taskbar-sep"></div>
+      <span class="taskbar-item">BurnNotes</span>
+      <span class="taskbar-spacer"></span>
+      <span class="taskbar-item" id="taskbar-level">LV 1</span>
+      <span class="taskbar-item" id="taskbar-rank">Newcomer</span>
+      <span class="taskbar-item xp" id="taskbar-xp">0 XP</span>
+      <span class="taskbar-item">Burned <span id="taskbar-burned">000000</span></span>
+      <span class="taskbar-clock" id="clock">00:00</span>
+    </footer>
 
     <script type="module" src="/assets/write.js"></script>
   </body>

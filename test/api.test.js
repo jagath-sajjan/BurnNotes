@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { after, before, describe, it } from 'node:test'
+import { after, before, beforeEach, describe, it } from 'node:test'
 import { unlinkSync } from 'node:fs'
 
 const DB_FILE = 'test-api.db'
@@ -11,6 +11,7 @@ process.env.TRUST_PROXY = ''
 
 const { initDatabase, db, closeDatabase } = await import('../src/db.js')
 const { createApp } = await import('../src/app.js')
+const { resetApiRateLimiters } = await import('../src/routes/api.js')
 const { encryptNote, generateIv, generateNoteKey, bytesToBase64Url } = await import(
   '../public/assets/crypto.js'
 )
@@ -31,15 +32,19 @@ function postJson(path, body) {
   })
 }
 
-async function makeNote(plaintext = 'hunter2', ttl = '1h') {
+async function makeNote(plaintext = 'hunter2', ttl = '1h', burnMode = undefined) {
   const key = generateNoteKey()
   const iv = generateIv()
   const ciphertext = await encryptNote(plaintext, key, iv)
-  const response = await postJson('/api/notes', {
+  const body = {
     ciphertext,
     iv: bytesToBase64Url(iv),
     ttl,
-  })
+  }
+  if (burnMode !== undefined) {
+    body.burnMode = burnMode
+  }
+  const response = await postJson('/api/notes', body)
   assert.equal(response.status, 201)
   const { id } = await response.json()
   return { id, key, ciphertext, iv: bytesToBase64Url(iv) }
@@ -49,8 +54,20 @@ function readNote(id) {
   return call(`/api/notes/${id}/read`, { method: 'POST' })
 }
 
+function peekNote(id) {
+  return call(`/api/notes/${id}/peek`, { method: 'POST' })
+}
+
+function expiryOf(id) {
+  return call(`/api/notes/${id}/expiry`)
+}
+
 before(async () => {
   await initDatabase()
+})
+
+beforeEach(() => {
+  resetApiRateLimiters()
 })
 
 after(() => {
@@ -145,7 +162,10 @@ describe('POST /api/notes/:id/read', () => {
     const { id, ciphertext, iv } = await makeNote('first read wins')
     const response = await readNote(id)
     assert.equal(response.status, 200)
-    assert.deepEqual(await response.json(), { ciphertext, iv })
+    const body = await response.json()
+    assert.equal(body.ciphertext, ciphertext)
+    assert.equal(body.iv, iv)
+    assert.equal(body.score.chars, 'first read wins'.length)
   })
 
   it('returns 404 on the second read', async () => {
@@ -222,6 +242,149 @@ describe('GET /api/stats', () => {
     await readNote('cccccccccccccccccccccc')
     const after = await (await call('/api/stats')).json()
     assert.equal(after.burned, before.burned)
+  })
+
+  it('reports xp and characters', async () => {
+    const stats = await (await call('/api/stats')).json()
+    assert.equal(typeof stats.xp, 'number')
+    assert.equal(typeof stats.chars, 'number')
+  })
+})
+
+describe('burn modes', () => {
+  it('defaults to auto', async () => {
+    const { id } = await makeNote()
+    const described = await (await expiryOf(id)).json()
+    assert.equal(described.burnMode, 'auto')
+  })
+
+  it('rejects an unknown mode', async () => {
+    const key = generateNoteKey()
+    const iv = generateIv()
+    const ciphertext = await encryptNote('hunter2', key, iv)
+    const response = await postJson('/api/notes', {
+      ciphertext,
+      iv: bytesToBase64Url(iv),
+      ttl: '1h',
+      burnMode: 'eternal',
+    })
+    assert.equal(response.status, 400)
+  })
+
+  it('caps a manual note at 24 hours', async () => {
+    const key = generateNoteKey()
+    const iv = generateIv()
+    const ciphertext = await encryptNote('hunter2', key, iv)
+    const response = await postJson('/api/notes', {
+      ciphertext,
+      iv: bytesToBase64Url(iv),
+      ttl: '7d',
+      burnMode: 'manual',
+    })
+    assert.equal(response.status, 400)
+  })
+
+  it('accepts a manual note with a short expiry', async () => {
+    const { id } = await makeNote('hunter2', '10m', 'manual')
+    const described = await (await expiryOf(id)).json()
+    assert.equal(described.burnMode, 'manual')
+  })
+
+  it('stores the burn mode', async () => {
+    const { id } = await makeNote('hunter2', '1h', 'manual')
+    const row = await db.execute({
+      sql: 'SELECT burn_mode FROM notes WHERE id = ?',
+      args: [id],
+    })
+    assert.equal(row.rows[0].burn_mode, 'manual')
+  })
+})
+
+describe('GET /api/notes/:id/expiry', () => {
+  it('reports the mode and expiry without the ciphertext', async () => {
+    const { id } = await makeNote()
+    const response = await expiryOf(id)
+    assert.equal(response.status, 200)
+    const body = await response.json()
+    assert.equal(body.burnMode, 'auto')
+    assert.equal(typeof body.expiresAt, 'number')
+    assert.equal('ciphertext' in body, false)
+  })
+
+  it('returns not_found for a note that does not exist', async () => {
+    const response = await expiryOf('cccccccccccccccccccccc')
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), NOT_FOUND_BODY)
+  })
+})
+
+describe('POST /api/notes/:id/peek', () => {
+  it('leaves a manual note readable', async () => {
+    const { id, ciphertext } = await makeNote('peekable', '1h', 'manual')
+    const first = await peekNote(id)
+    assert.equal(first.status, 200)
+    const body = await first.json()
+    assert.equal(body.ciphertext, ciphertext)
+    assert.equal(body.score, undefined)
+
+    const second = await peekNote(id)
+    assert.equal(second.status, 200)
+  })
+
+  it('does not burn or score the note', async () => {
+    const before = await (await call('/api/stats')).json()
+    const { id } = await makeNote('peekable', '1h', 'manual')
+    await peekNote(id)
+    await peekNote(id)
+    const after = await (await call('/api/stats')).json()
+    assert.equal(after.burned, before.burned)
+    assert.equal(after.xp, before.xp)
+  })
+
+  it('refuses to peek at an auto note', async () => {
+    const { id } = await makeNote()
+    const response = await peekNote(id)
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), NOT_FOUND_BODY)
+  })
+
+  it('still allows the reader to burn a manual note', async () => {
+    const { id } = await makeNote('peekable', '1h', 'manual')
+    await peekNote(id)
+    assert.equal((await readNote(id)).status, 200)
+    assert.equal((await readNote(id)).status, 404)
+  })
+})
+
+describe('xp scoring', () => {
+  it('returns a score with the burn', async () => {
+    const { id } = await makeNote('a longer secret worth points', '1h')
+    const response = await readNote(id)
+    assert.equal(response.status, 200)
+    const { score } = await response.json()
+    assert.equal(typeof score.xp, 'number')
+    assert.equal(typeof score.chars, 'number')
+    assert.equal(score.chars, 'a longer secret worth points'.length)
+    assert.equal(score.xp, 100 + Math.floor(score.chars / 5))
+  })
+
+  it('awards more xp for a longer note', async () => {
+    const short = await (await readNote((await makeNote('short', '1h')).id)).json()
+    const long = await (
+      await readNote((await makeNote('a much much longer secret than the short one', '1h')).id)
+    ).json()
+    assert.ok(long.score.xp > short.score.xp)
+    assert.ok(long.score.chars > short.score.chars)
+  })
+
+  it('accumulates xp and chars in stats', async () => {
+    const before = await (await call('/api/stats')).json()
+    const { id } = await makeNote('twelve chars', '1h')
+    const { score } = await (await readNote(id)).json()
+    const after = await (await call('/api/stats')).json()
+    assert.equal(after.xp, before.xp + score.xp)
+    assert.equal(after.chars, before.chars + score.chars)
+    assert.equal(after.burned, before.burned + 1)
   })
 })
 

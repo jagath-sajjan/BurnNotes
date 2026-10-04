@@ -11,6 +11,8 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: TRUST_PROXY
+        value: true
       - key: TURSO_DATABASE_URL
         sync: false
       - key: TURSO_AUTH_TOKEN

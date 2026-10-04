@@ -1,4 +1,4 @@
-import { refreshCounter } from './counter.js'
+import { refreshStats } from './counter.js'
 import {
   bytesToBase64Url,
   encodeKeyFragment,
@@ -7,9 +7,15 @@ import {
   generateNoteKey,
 } from './crypto.js'
 import { byId, setMessage, show } from './dom.js'
+import { runBoot } from './boot.js'
+import { initMenus } from './menu.js'
 import { isSoundEnabled, toggleSound } from './sound.js'
+import './taskbar.js'
 
 const MAX_NOTE_CHARS = 16000
+const MANUAL_MAX_TTL = '24h'
+const MANUAL_DEFAULT_TTL = '10m'
+const AUTO_DEFAULT_TTL = '1h'
 
 const form = byId('note-form')
 const textarea = byId('note-body')
@@ -21,6 +27,18 @@ const linkBox = byId('share-link')
 const copyButton = byId('copy-button')
 const newButton = byId('new-button')
 const soundButton = byId('sound-toggle')
+const manualHint = byId('manual-hint')
+const modeSummary = byId('mode-summary')
+const sevenDayOption = document.querySelector('#note-expiry option[value="7d"]')
+
+// Tracks whether the writer picked an expiry themselves. If they never did, we
+// are free to move the default when the burn mode changes.
+let expiryChosenByHand = false
+
+function selectedMode() {
+  const checked = document.querySelector('input[name="burn-mode"]:checked')
+  return checked === null ? 'auto' : checked.value
+}
 
 function describeError(status) {
   if (status === 429) return 'Too many notes from this network. Try again later.'
@@ -32,6 +50,26 @@ function describeError(status) {
 function paintSoundButton() {
   soundButton.textContent = isSoundEnabled() ? 'Sound: on' : 'Sound: off'
   soundButton.setAttribute('aria-pressed', String(isSoundEnabled()))
+}
+
+function paintMode() {
+  const manual = selectedMode() === 'manual'
+  show(manualHint, manual)
+
+  // A manual note lives on the server until it is burned, so it cannot be
+  // given a week to sit there.
+  if (sevenDayOption !== null) {
+    sevenDayOption.disabled = manual
+  }
+  if (manual && expiry.value === '7d') {
+    expiry.value = MANUAL_MAX_TTL
+  }
+
+  // Untouched expiry follows the mode. Manual notes default to something short
+  // because they sit there waiting for a reader.
+  if (!expiryChosenByHand) {
+    expiry.value = manual ? MANUAL_DEFAULT_TTL : AUTO_DEFAULT_TTL
+  }
 }
 
 function resetToForm() {
@@ -69,6 +107,7 @@ async function createNote(event) {
     return
   }
 
+  const burnMode = selectedMode()
   createButton.disabled = true
   createButton.textContent = 'Encrypting...'
 
@@ -85,6 +124,7 @@ async function createNote(event) {
         ciphertext,
         iv: bytesToBase64Url(iv),
         ttl: expiry.value,
+        burnMode,
       }),
     })
 
@@ -97,10 +137,11 @@ async function createNote(event) {
     const link = `${window.location.origin}/n/${data.id}#${encodeKeyFragment(rawKey)}`
 
     linkBox.value = link
+    modeSummary.textContent = burnMode === 'manual' ? 'Manual burn' : 'Auto burn'
     show(form, false)
     show(result, true)
     copyButton.focus()
-    refreshCounter()
+    refreshStats()
   } catch {
     setMessage(formError, 'Could not create the note. Try again.', 'warn')
   } finally {
@@ -118,4 +159,24 @@ soundButton.addEventListener('click', () => {
   paintSoundButton()
 })
 
+for (const radio of document.querySelectorAll('input[name="burn-mode"]')) {
+  radio.addEventListener('change', paintMode)
+}
+
+expiry.addEventListener('change', () => {
+  expiryChosenByHand = true
+})
+
+document.addEventListener('command', (event) => {
+  const { command } = event.detail
+  if (command === 'new') resetToForm()
+  if (command === 'sound') {
+    toggleSound()
+    paintSoundButton()
+  }
+})
+
+initMenus(document)
 paintSoundButton()
+paintMode()
+runBoot()

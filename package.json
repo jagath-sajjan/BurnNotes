@@ -17,6 +17,7 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "test": "node --test 'test/**/*.test.js'",
+    "test:e2e": "node test/e2e.local.mjs",
     "dev:local": "DATABASE_URL=file:local.db node --watch src/server.js",
     "start:local": "DATABASE_URL=file:local.db node src/server.js"
   }

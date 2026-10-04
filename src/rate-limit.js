@@ -14,7 +14,7 @@ export function createRateLimiter({ limit, windowMs }) {
 
   let sincePrune = 0
 
-  return function check(key, now = Date.now()) {
+  function check(key, now = Date.now()) {
     sincePrune += 1
     if (sincePrune >= 500) {
       sincePrune = 0
@@ -37,4 +37,8 @@ export function createRateLimiter({ limit, windowMs }) {
     hits.set(key, stamps)
     return { allowed: true, remaining: limit - stamps.length, retryAfterSeconds: 0 }
   }
+
+  check.clear = () => hits.clear()
+
+  return check
 }
