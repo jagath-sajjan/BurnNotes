@@ -46,10 +46,15 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error('PORT must be an integer between 1 and 65535')
 }
 
+// Off by default. Turn on only when a platform you control sets
+// x-forwarded-for and strips any client supplied value.
+const trustProxy = process.env.TRUST_PROXY === 'true'
+
 export const config = {
   databaseUrl,
   authToken,
   usesLocalFile,
   port,
+  trustProxy,
   isProduction: process.env.NODE_ENV === 'production',
 }

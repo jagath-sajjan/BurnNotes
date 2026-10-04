@@ -2,10 +2,12 @@ import { serve } from '@hono/node-server'
 import { createApp } from './app.js'
 import { config } from './config.js'
 import { closeDatabase, initDatabase } from './db.js'
+import { startSweep } from './sweep.js'
 
 await initDatabase()
 
 const app = createApp()
+const sweep = startSweep()
 
 const server = serve({ fetch: app.fetch, port: config.port }, (info) => {
   console.log(`BurnNotes listening on http://localhost:${info.port}`)
@@ -19,6 +21,7 @@ function shutdown(signal) {
   if (closing) return
   closing = true
   console.log(`${signal} received, shutting down`)
+  clearInterval(sweep)
   server.close(() => {
     closeDatabase()
     process.exit(0)
