@@ -51,9 +51,6 @@
           </div>
 
           <div id="gate">
-            <button type="button" id="burn-button" class="button primary" hidden>
-              Burn this note
-            </button>
             <p id="gate-error" class="message" role="status" aria-live="polite"></p>
           </div>
 
@@ -81,12 +78,19 @@
             </div>
 
             <div id="burned-notice" class="burned-notice" hidden>
-              <pre class="flame-static" aria-hidden="true">
-   /|\
-  / | \
- /  |  \
-(   ^   )
- \_____/</pre
+              <pre id="flame-done" class="flame-static" aria-hidden="true">
+           |         
+          /|\        
+         / | \       
+        /  |  \      
+       /   |   \     
+      /    *    \    
+     /     *     \   
+    /      *      \  
+  /_________________\
+     \   |   |   /   
+         \_|_|       
+              </pre
               >
               <p class="burned-line">Note burned.</p>
             </div>
@@ -99,6 +103,15 @@
             <button type="button" id="done-button" class="button" hidden>
               Write your own
             </button>
+          </div>
+
+          <div id="burn-actions" class="burn-actions" hidden>
+            <button type="button" id="burn-button" class="button primary">
+              Burn this note
+            </button>
+            <p class="burn-hint">
+              Nothing is destroyed until you press this, or the timer runs out.
+            </p>
           </div>
         </div>
 

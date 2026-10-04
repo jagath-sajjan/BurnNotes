@@ -46,6 +46,7 @@ const progressLabel = byId('progress-label')
 const progressFill = byId('progress-fill')
 const countdown = byId('countdown')
 const countdownValue = byId('countdown-value')
+const burnActions = byId('burn-actions')
 const burnButton = byId('burn-button')
 const burnedNotice = byId('burned-notice')
 const readError = byId('read-error')
@@ -117,6 +118,7 @@ async function requestJson(path, options) {
 function showGone(message) {
   state.alive = false
   show(gate, false)
+  show(burnActions, false)
   show(reveal, false)
   show(phaseBox, false)
   show(burnedNotice, false)
@@ -128,9 +130,9 @@ function showGone(message) {
 
 function showDecryptFailure() {
   show(gate, false)
+  show(burnActions, false)
   show(reveal, true)
   show(phaseBox, false)
-  show(burnButton, false)
   show(readError, true)
   show(doneButton, true)
   doneButton.focus()
@@ -175,9 +177,9 @@ async function runInferno() {
 
 function finishBurn() {
   state.alive = false
+  show(burnActions, false)
   show(noteText, false)
   show(progressWrap, false)
-  show(burnButton, false)
   show(countdown, false)
   show(phaseBox, false)
   show(burnedNotice, true)
@@ -192,7 +194,7 @@ async function burnNow() {
   if (!state.alive || state.cancelled) return
   state.cancelled = true
   burnButton.disabled = true
-  show(burnButton, false)
+  show(burnActions, false)
   show(countdown, false)
 
   try {
@@ -229,6 +231,7 @@ async function openNote(path) {
 
 function revealText(plaintext) {
   show(gate, false)
+  show(burnActions, true)
   show(reveal, true)
   show(phaseBox, true)
   show(readError, false)
@@ -252,7 +255,6 @@ async function autoFlow() {
 
   setText(progressLabel, 'Auto burn armed')
   progressFill.style.setProperty('--progress', '100%')
-  show(burnButton, true)
   setText(stage, 'Reading')
 
   const windowMs = plentyFor(plaintext)
@@ -281,7 +283,6 @@ async function manualFlow() {
   setText(stage, 'Manual burn')
   setText(progressLabel, 'WAITING FOR THE READER')
   progressFill.style.setProperty('--progress', '100%')
-  show(burnButton, true)
 
   // The server destroys this note on its own at expiresAt, so closing the tab
   // still burns it.
