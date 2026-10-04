@@ -445,6 +445,25 @@ textarea::placeholder {
   color: var(--ember-deep);
 }
 
+/* The live burn is the main event, so it gets more room and a glow than the
+   end state does. Sized in vw so the art never wraps on a narrow screen. */
+#flame {
+  font-size: clamp(11px, 3.6vw, 20px);
+  text-shadow: 0 0 14px rgba(255, 140, 0, 0.4);
+  animation: flicker 0.44s steps(2, end) infinite;
+}
+
+@keyframes flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.82;
+  }
+}
+
 .embers {
   position: absolute;
   inset: 0;

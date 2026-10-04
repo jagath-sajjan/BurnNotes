@@ -18,14 +18,62 @@ const TICK_MS = 90
 const CLOCK_TICK_MS = 200
 
 const FLAME_FRAMES = [
-  '    |    ',
-  '   /|\\   ',
-  '  / | \\  ',
-  ' /  |  \\ ',
-  ' \\  ^  / ',
-  '  \\   /  ',
-  '   \\_/   ',
-  '    *    ',
+  ['                   ',
+   '                   ',
+   '         *         ',
+   '         |         ',
+   '        /|\\        ',
+   '                   ',
+   '                   '],
+  ['                   ',
+   '         |         ',
+   '        /|\\        ',
+   '       / | \\       ',
+   '      /  ^  \\      ',
+   '                   ',
+   '                   '],
+  ['                   ',
+   '         |         ',
+   '        /|\\        ',
+   '       / | \\       ',
+   '      /  |  \\      ',
+   '     /   *   \\     ',
+   '                   '],
+  ['         |         ',
+   '        /|\\        ',
+   '       / | \\       ',
+   '      /  |  \\      ',
+   '     /   ^   \\     ',
+   '   /__________\\    ',
+   '                   '],
+  ['                   ',
+   '         |         ',
+   '        /|\\        ',
+   '      /  \\| /      ',
+   '     /   ^   \\     ',
+   '   /__________\\    ',
+   '                   '],
+  ['         |         ',
+   '       / | \\       ',
+   '      /  |  \\      ',
+   '     /   ^   \\     ',
+   '    /    |    \\    ',
+   '   /___________\\   ',
+   '   \\   | | |   /   '],
+  ['         |         ',
+   '        / \\        ',
+   '     /   ^   \\     ',
+   '   /__________\\    ',
+   '     \\   |   /     ',
+   '       \\_|_/       ',
+   '                   '],
+  ['         .         ',
+   '         .         ',
+   '         |         ',
+   '       /   \\       ',
+   '     /_______\\     ',
+   '         *         ',
+   '                   '],
 ]
 
 const noteId = window.location.pathname.split('/').filter(Boolean)[1] ?? ''
@@ -150,12 +198,45 @@ async function runPurge() {
   }
 }
 
+// Frames are stored as rows so the art stays readable in source.
+function frameText(index) {
+  return FLAME_FRAMES[index % FLAME_FRAMES.length].join('\n')
+}
+
+// The fullest frame. Every frame is padded to the same height, so this counts
+// visible characters instead of rows. It is what a visitor with reduced motion
+// sees, and the last thing seen before the ash settles.
+function countInk(rows) {
+  return rows.join('').trim().length
+}
+
+const STILL_FRAME = FLAME_FRAMES.reduce(
+  (best, rows, index) => (countInk(rows) > countInk(FLAME_FRAMES[best]) ? index : best),
+  0
+)
+
 async function runInferno() {
   show(progressWrap, true)
   setText(progressLabel, 'INCINERATING')
+
+  if (prefersReducedMotion()) {
+    // No flicker and no embers, but the fire is still there to look at. Hold
+    // one full frame for the whole burn rather than animating.
+    setText(flame, frameText(STILL_FRAME))
+    for (let ratio = 1; ratio >= 0; ratio -= 0.05) {
+      progressFill.style.setProperty('--progress', `${Math.round(ratio * 100)}%`)
+      await sleep(TICK_MS)
+    }
+    return
+  }
+
+  // Paint a spark before anything else can run, so the element is never empty.
+  setText(flame, frameText(0))
+
   spawnEmbers(emberHost, 30)
 
   const startedAt = performance.now()
+  const totalFrames = FLAME_FRAMES.length * 2
   let frame = 0
 
   for (;;) {
@@ -163,16 +244,17 @@ async function runInferno() {
     progressFill.style.setProperty('--progress', `${Math.round((1 - ratio) * 100)}%`)
     if (ratio >= 1) break
 
-    if (!prefersReducedMotion() && frame < FLAME_FRAMES.length * 4) {
-      setText(flame, FLAME_FRAMES[frame % FLAME_FRAMES.length])
-      frame += 1
-    }
+    setText(flame, frameText(frame))
+    frame += 1
+    if (frame >= totalFrames) frame = 0
     await sleep(TICK_MS)
   }
 
-  setText(flame, FLAME_FRAMES[FLAME_FRAMES.length - 1])
+  // Land on the biggest frame, not a bare spark, then let the ash settle.
+  setText(flame, frameText(STILL_FRAME))
   spawnEmbers(emberHost, 12)
   await sleep(320)
+  setText(flame, frameText(FLAME_FRAMES.length - 1))
 }
 
 function finishBurn() {
