@@ -40,6 +40,10 @@ async function create(plaintext, ttl, burnMode) {
   return { status, body, key, ciphertext, iv: bytesToBase64Url(iv) }
 }
 
+async function peekNoteViaApi(id) {
+  return api(`/api/notes/${id}/peek`, { method: 'POST' })
+}
+
 console.log('static assets referenced by every page')
 for (const page of ['/', '/n/aaaaaaaaaaaaaaaaaaaaaa', '/n/bbbbbbbbbbbbbbbbbbbbbb']) {
   const html = await (await fetch(BASE + page)).text()
@@ -72,8 +76,6 @@ console.log('\nauto burn')
   const read = await api(`/api/notes/${note.body.id}/read`, { method: 'POST' })
   check('read 200', read.status === 200)
   check('ciphertext matches', read.body.ciphertext === note.ciphertext)
-  check('score present', typeof read.body.score?.xp === 'number', JSON.stringify(read.body.score))
-  check('chars counted', read.body.score.chars === 'auto secret text'.length, JSON.stringify(read.body.score))
 
   const again = await api(`/api/notes/${note.body.id}/read`, { method: 'POST' })
   check('second read 404', again.status === 404)
@@ -95,12 +97,12 @@ console.log('\nmanual burn')
   }
 
   const beforeStats = (await api('/api/stats')).body
-  const stillStats = (await api('/api/stats')).body
-  check('peeking scores nothing', beforeStats.xp === stillStats.xp && beforeStats.burned === stillStats.burned)
+  await peekNoteViaApi(note.body.id)
+  const afterPeeks = (await api('/api/stats')).body
+  check('peeking does not count as burned', afterPeeks.burned === beforeStats.burned)
 
   const burn = await api(`/api/notes/${note.body.id}/read`, { method: 'POST' })
   check('manual burn 200', burn.status === 200)
-  check('manual burn scores', burn.body.score.chars === 'manual secret text'.length)
 
   const afterBurn = await api(`/api/notes/${note.body.id}/peek`, { method: 'POST' })
   check('peek after burn 404', afterBurn.status === 404)
@@ -123,9 +125,7 @@ console.log('\nvalidation')
 console.log('\nstats')
 {
   const stats = (await api('/api/stats')).body
-  check('has burned', Number.isFinite(stats.burned))
-  check('has xp', Number.isFinite(stats.xp))
-  check('has chars', Number.isFinite(stats.chars))
+  check('stats has only burned', Object.keys(stats).join() === 'burned')
   console.log(`        ${JSON.stringify(stats)}`)
 }
 

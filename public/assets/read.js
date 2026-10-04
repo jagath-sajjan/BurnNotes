@@ -48,7 +48,6 @@ const countdown = byId('countdown')
 const countdownValue = byId('countdown-value')
 const burnButton = byId('burn-button')
 const burnedNotice = byId('burned-notice')
-const burnedXp = byId('burned-xp')
 const readError = byId('read-error')
 const goneNotice = byId('gone-notice')
 const goneDetail = goneNotice.querySelector('.gone-detail')
@@ -174,7 +173,7 @@ async function runInferno() {
   await sleep(320)
 }
 
-function finishBurn(score) {
+function finishBurn() {
   state.alive = false
   show(noteText, false)
   show(progressWrap, false)
@@ -183,13 +182,6 @@ function finishBurn(score) {
   show(phaseBox, false)
   show(burnedNotice, true)
   show(doneButton, true)
-
-  if (score) {
-    setText(
-      burnedXp,
-      `+${score.xp} BurnNote XP for ${score.chars} characters. ${state.mode === 'manual' ? 'Burned by the reader.' : 'Burned on schedule.'}`,
-    )
-  }
 
   playBurnSound()
   refreshStats()
@@ -203,19 +195,15 @@ async function burnNow() {
   show(burnButton, false)
   show(countdown, false)
 
-  let score
   try {
-    const payload = await requestJson(`/api/notes/${encodeURIComponent(noteId)}/read`, {
-      method: 'POST',
-    })
-    score = payload.score
+    await requestJson(`/api/notes/${encodeURIComponent(noteId)}/read`, { method: 'POST' })
   } catch (error) {
     showGone(describeFailure(error.status ?? 0))
     return
   }
 
   await runInferno()
-  finishBurn(score)
+  finishBurn()
 }
 
 async function openNote(path) {

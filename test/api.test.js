@@ -165,7 +165,6 @@ describe('POST /api/notes/:id/read', () => {
     const body = await response.json()
     assert.equal(body.ciphertext, ciphertext)
     assert.equal(body.iv, iv)
-    assert.equal(body.score.chars, 'first read wins'.length)
   })
 
   it('returns 404 on the second read', async () => {
@@ -244,10 +243,9 @@ describe('GET /api/stats', () => {
     assert.equal(after.burned, before.burned)
   })
 
-  it('reports xp and characters', async () => {
+  it('reports only the burned counter', async () => {
     const stats = await (await call('/api/stats')).json()
-    assert.equal(typeof stats.xp, 'number')
-    assert.equal(typeof stats.chars, 'number')
+    assert.deepEqual(Object.keys(stats).sort(), ['burned'])
   })
 })
 
@@ -325,20 +323,18 @@ describe('POST /api/notes/:id/peek', () => {
     assert.equal(first.status, 200)
     const body = await first.json()
     assert.equal(body.ciphertext, ciphertext)
-    assert.equal(body.score, undefined)
 
     const second = await peekNote(id)
     assert.equal(second.status, 200)
   })
 
-  it('does not burn or score the note', async () => {
+  it('does not burn the note', async () => {
     const before = await (await call('/api/stats')).json()
     const { id } = await makeNote('peekable', '1h', 'manual')
     await peekNote(id)
     await peekNote(id)
     const after = await (await call('/api/stats')).json()
     assert.equal(after.burned, before.burned)
-    assert.equal(after.xp, before.xp)
   })
 
   it('refuses to peek at an auto note', async () => {
@@ -356,37 +352,6 @@ describe('POST /api/notes/:id/peek', () => {
   })
 })
 
-describe('xp scoring', () => {
-  it('returns a score with the burn', async () => {
-    const { id } = await makeNote('a longer secret worth points', '1h')
-    const response = await readNote(id)
-    assert.equal(response.status, 200)
-    const { score } = await response.json()
-    assert.equal(typeof score.xp, 'number')
-    assert.equal(typeof score.chars, 'number')
-    assert.equal(score.chars, 'a longer secret worth points'.length)
-    assert.equal(score.xp, 100 + Math.floor(score.chars / 5))
-  })
-
-  it('awards more xp for a longer note', async () => {
-    const short = await (await readNote((await makeNote('short', '1h')).id)).json()
-    const long = await (
-      await readNote((await makeNote('a much much longer secret than the short one', '1h')).id)
-    ).json()
-    assert.ok(long.score.xp > short.score.xp)
-    assert.ok(long.score.chars > short.score.chars)
-  })
-
-  it('accumulates xp and chars in stats', async () => {
-    const before = await (await call('/api/stats')).json()
-    const { id } = await makeNote('twelve chars', '1h')
-    const { score } = await (await readNote(id)).json()
-    const after = await (await call('/api/stats')).json()
-    assert.equal(after.xp, before.xp + score.xp)
-    assert.equal(after.chars, before.chars + score.chars)
-    assert.equal(after.burned, before.burned + 1)
-  })
-})
 
 describe('security headers', () => {
   it('sets the policy on api responses', async () => {

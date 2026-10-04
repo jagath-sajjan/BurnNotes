@@ -1,15 +1,5 @@
 import { db } from './db.js'
 import { newNoteId } from './ids.js'
-import { base64UrlByteLength, GCM_TAG_BYTES } from './validation.js'
-
-export const XP_BASE = 100
-export const XP_BONUS_CAP = 400
-
-export function scoreFor(ciphertext) {
-  const chars = Math.max(0, base64UrlByteLength(ciphertext) - GCM_TAG_BYTES)
-  const bonus = Math.min(XP_BONUS_CAP, Math.floor(chars / 5))
-  return { chars, xp: XP_BASE + bonus }
-}
 
 export async function createNote({ ciphertext, iv, burnMode, ttlSeconds }, now = Date.now()) {
   const id = newNoteId()
@@ -35,22 +25,9 @@ export async function burnNote(id, now = Date.now()) {
   const row = result.rows[0]
   if (row === undefined) return null
 
-  const ciphertext = String(row.ciphertext)
-  const score = scoreFor(ciphertext)
+  await db.execute({ sql: "UPDATE stats SET value = value + 1 WHERE key = 'burned'", args: [] })
 
-  await db.execute({
-    sql: `UPDATE stats
-          SET value = CASE key
-            WHEN 'burned' THEN value + 1
-            WHEN 'xp' THEN value + ?
-            WHEN 'chars' THEN value + ?
-            ELSE value
-          END
-          WHERE key IN ('burned', 'xp', 'chars')`,
-    args: [score.xp, score.chars],
-  })
-
-  return { ciphertext, iv: String(row.iv), score }
+  return { ciphertext: String(row.ciphertext), iv: String(row.iv) }
 }
 
 // Non destructive. Only serves manual notes, so an auto note can never be
@@ -80,16 +57,10 @@ export async function describeNote(id, now = Date.now()) {
   return { burnMode: String(row.burn_mode), expiresAt: Number(row.expires_at) }
 }
 
-export async function readStats() {
-  const result = await db.execute({ sql: 'SELECT key, value FROM stats', args: [] })
-  const stats = { burned: 0, xp: 0, chars: 0 }
-  for (const row of result.rows) {
-    const key = String(row.key)
-    if (Object.hasOwn(stats, key)) {
-      stats[key] = Number(row.value)
-    }
-  }
-  return stats
+export async function readBurnedCount() {
+  const result = await db.execute({ sql: "SELECT value FROM stats WHERE key = 'burned'", args: [] })
+  const row = result.rows[0]
+  return row === undefined ? 0 : Number(row.value)
 }
 
 export async function purgeExpired(now = Date.now()) {

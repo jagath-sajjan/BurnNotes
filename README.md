@@ -34,8 +34,8 @@ Open http://localhost:3000.
     POST /api/notes              { ciphertext, iv, ttl, burnMode }  returns { id }
     GET  /api/notes/:id/expiry   mode and expiry, no ciphertext
     POST /api/notes/:id/peek     manual notes only, does not destroy
-    POST /api/notes/:id/read     destroys the note   returns { ciphertext, iv, score }
-    GET  /api/stats              returns { burned, xp, chars }
+    POST /api/notes/:id/read     destroys the note   returns { ciphertext, iv }
+    GET  /api/stats              returns { burned }
     GET  /api/health             returns { ok }
 
 `ttl` is one of `10m`, `1h`, `24h`, `7d`. `burnMode` is `auto` or `manual`, and
@@ -56,12 +56,6 @@ The reader gets as long as the expiry allows. If they close the tab it is still
 destroyed on time by the sweeper. Use this when the reader may need longer than
 a countdown allows.
 
-## BurnNote XP
-
-Burning a note awards `100 + chars / 5` xp, capped at 500 per note. Ranks run
-from Newcomer to Flashpoint. Counters are public and global, they are decoration
-and not an identity system.
-
 ## Reading speed
 
 Auto burn holds the note open for 15 seconds plus 90 milliseconds per
@@ -73,7 +67,7 @@ remaining.
 
     src/config.js        environment and dotenv loading
     src/db.js            libSQL client and schema
-    src/notes.js         create, burn, peek, score, stats, purge
+    src/notes.js         create, burn, peek, stats, purge
     src/ids.js           128 bit note ids
     src/validation.js    request validation
     src/rate-limit.js    in memory limiter per address

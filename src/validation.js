@@ -21,17 +21,6 @@ export const MAX_CIPHERTEXT_CHARS = 21848
 
 const BASE64URL = /^[A-Za-z0-9_-]+$/
 
-// AES GCM appends a 16 byte tag. The 12 byte iv is sent in its own field and
-// is not part of the ciphertext, so it does not count here.
-export const GCM_TAG_BYTES = 16
-
-export function base64UrlByteLength(value) {
-  const remainder = value.length % 4
-  if (remainder === 1) return 0
-  if (remainder === 0) return (value.length / 4) * 3
-  return Math.floor(value.length / 4) * 3 + (remainder === 2 ? 1 : 2)
-}
-
 function isBase64Url(value) {
   if (typeof value !== 'string' || value.length === 0) return false
   if (value.length % 4 === 1) return false

@@ -15,8 +15,7 @@ For every live note the database contains four values and nothing else:
     expires_at   milliseconds
     burn_mode    `auto` or `manual`
 
-Plus one row in `stats` holding three integers: notes burned, xp earned, and
-total characters burned.
+Plus one row in `stats` holding a single integer, the number of notes burned.
 
 ## What the server never receives
 
@@ -43,8 +42,8 @@ Honest limits of the blind store model:
    source address of both. It can tell that a person at address A handed a
    secret to a person at address B, and how long the secret sat unread. That is
    metadata, and metadata is often enough.
-3. **Volume.** The counters are global and public. They reveal how much traffic
-   the service handles and roughly how much text it has carried.
+3. **Volume.** The burned counter is global and public. It reveals how much
+   traffic the service handles.
 4. **Aggregate size and churn.** Row counts and insert rates describe usage.
 
 ## Link sharing channels

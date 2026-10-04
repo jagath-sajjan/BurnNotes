@@ -14,8 +14,6 @@
   --ink-soft: #2b2b2b;
   --ember: #ff7a1a;
   --ember-deep: #b23000;
-  --xp: #4b0082;
-  --xp-lit: #a020f0;
 }
 
 * {
@@ -519,60 +517,6 @@ textarea::placeholder {
   font-weight: bold;
 }
 
-.burned-xp {
-  margin: 4px 0 0;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 13px;
-  color: var(--xp);
-  font-weight: bold;
-}
-
-.xp-panel {
-  margin: 0 2px;
-  padding: 8px 10px;
-  background: linear-gradient(180deg, #2a0050 0%, var(--xp) 100%);
-  color: #e8d8ff;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 12px;
-}
-
-.xp-heading {
-  margin: 0 0 4px;
-  font-size: 12px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--xp-lit);
-}
-
-.xp-line {
-  margin: 0 0 6px;
-}
-
-.dot {
-  opacity: 0.6;
-}
-
-.xp-bar {
-  --progress: 0%;
-  height: 12px;
-  padding: 1px;
-  background: #180030;
-  border: 1px solid #000;
-}
-
-.xp-fill {
-  display: block;
-  width: var(--progress);
-  height: 100%;
-  background: repeating-linear-gradient(90deg, var(--xp-lit) 0 6px, #6a00b0 6px 12px);
-  transition: width 400ms ease-out;
-}
-
-.xp-next {
-  margin: 6px 0 0;
-  color: #c9a8ff;
-}
-
 .status-bar {
   display: flex;
   gap: 3px;
@@ -737,11 +681,6 @@ textarea::placeholder {
   white-space: nowrap;
 }
 
-.taskbar-item.xp {
-  color: var(--xp);
-  font-weight: bold;
-}
-
 .taskbar-spacer {
   flex: 1 1 auto;
 }
@@ -759,52 +698,149 @@ textarea::placeholder {
   inset: 0;
   z-index: 100;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--bevel-black);
-  color: #33ff33;
-  font-family: 'Courier New', Courier, monospace;
+  gap: 34px;
+  padding: 24px;
+  overflow: hidden;
+  font-family: 'Trebuchet MS', 'Segoe UI', Arial, sans-serif;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.55), transparent 58%),
+    radial-gradient(circle at 78% 92%, rgba(0, 30, 90, 0.55), transparent 60%),
+    linear-gradient(103deg, #0b3d9e 0%, #2f8fe8 16%, #1a6fd4 38%, #0d4bb0 62%, #0a3a8c 100%);
 }
 
 .boot.leaving {
   opacity: 0;
-  transition: opacity 400ms ease-out;
+  transition: opacity 420ms ease-out;
 }
 
-.boot-inner {
-  width: min(420px, calc(100% - 32px));
+.boot-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: #fff;
 }
 
-.boot-title {
-  margin: 0 0 12px;
-  font-size: 22px;
-  font-weight: bold;
-  letter-spacing: 0.14em;
-  text-shadow: 0 0 6px rgba(51, 255, 51, 0.55);
+.boot-flag {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  width: 96px;
+  height: 68px;
+  margin-bottom: 10px;
+  transform: perspective(160px) rotateY(-10deg) skewY(-3deg);
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45));
 }
 
-.boot-log {
-  min-height: 92px;
-  font-size: 12px;
-}
-
-.boot-line {
-  margin: 0 0 2px;
-  white-space: nowrap;
-  overflow: hidden;
-}
-
-.boot-bar {
-  height: 14px;
-  padding: 1px;
-  border: 1px solid #33ff33;
-}
-
-.boot-bar .boot-fill {
+.boot-flag .quad {
   display: block;
-  width: var(--progress, 0%);
-  height: 100%;
-  background: repeating-linear-gradient(90deg, #33ff33 0 8px, #0a5c0a 8px 16px);
+}
+
+.quad-1 {
+  background: #f35325;
+  clip-path: polygon(0 20%, 100% 0, 100% 76%, 0 100%);
+}
+
+.quad-2 {
+  background: #81bc06;
+  clip-path: polygon(0 0, 100% 20%, 100% 100%, 0 76%);
+}
+
+.quad-3 {
+  background: #05a6f0;
+  clip-path: polygon(0 20%, 100% 0, 100% 76%, 0 100%);
+}
+
+.quad-4 {
+  background: #ffba08;
+  clip-path: polygon(0 0, 100% 20%, 100% 100%, 0 76%);
+}
+
+.boot-wordmark {
+  font-size: clamp(38px, 9vw, 72px);
+  font-style: italic;
+  font-weight: bold;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  text-shadow:
+    2px 2px 0 #0a2a6b,
+    0 0 18px rgba(255, 255, 255, 0.4);
+}
+
+.boot-edition {
+  font-size: clamp(12px, 2.4vw, 16px);
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.55);
+}
+
+.boot-loading {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(15px, 3vw, 20px);
+  font-weight: bold;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.boot-loading-word::after {
+  content: '';
+  animation: boot-dots 1.4s steps(1, end) infinite;
+}
+
+@keyframes boot-dots {
+  0% {
+    content: '';
+  }
+  20% {
+    content: '.';
+  }
+  40% {
+    content: '..';
+  }
+  60%,
+  100% {
+    content: '...';
+  }
+}
+
+.boot-marquee {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34px;
+  overflow: hidden;
+  background: #000;
+  border-top: 2px solid #9fd0ff;
+}
+
+/* The track holds the text twice, so sliding it half its own width lands
+   copy two exactly where copy one started. No visible seam. */
+.boot-marquee-text {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: max-content;
+  color: #fff;
+  font-family: 'Trebuchet MS', 'Segoe UI', Arial, sans-serif;
+  font-size: 15px;
+  font-weight: bold;
+  white-space: nowrap;
+  line-height: 30px;
+  animation: boot-scroll 7s linear infinite;
+}
+
+@keyframes boot-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 @media (max-width: 560px) {
@@ -825,7 +861,7 @@ textarea::placeholder {
     flex: 1 1 140px;
   }
 
-  .taskbar-item:not(.xp):not(.taskbar-clock) {
+  .taskbar-item:not(.taskbar-clock) {
     display: none;
   }
 }
@@ -855,5 +891,13 @@ textarea::placeholder {
 
   textarea::placeholder {
     border-right: 2px solid #6a6a6a;
+  }
+
+  .boot-loading-word::after {
+    content: '...';
+  }
+
+  .boot-marquee-text {
+    animation: none;
   }
 }

@@ -7,7 +7,7 @@ import {
   describeNote,
   peekNote,
   purgeExpired,
-  readStats,
+  readBurnedCount,
 } from '../notes.js'
 import { createRateLimiter } from '../rate-limit.js'
 import { parseCreateBody } from '../validation.js'
@@ -36,7 +36,7 @@ export function apiRoutes() {
 
   app.get('/api/health', (ctx) => ctx.json({ ok: true }))
 
-  app.get('/api/stats', async (ctx) => ctx.json(await readStats()))
+  app.get('/api/stats', async (ctx) => ctx.json({ burned: await readBurnedCount() }))
 
   app.post('/api/notes', async (ctx) => {
     const verdict = createLimiter(clientIp(ctx))
@@ -101,7 +101,7 @@ export function apiRoutes() {
     const burned = await burnNote(id)
     if (burned === null) return ctx.json(NOT_FOUND, 404)
 
-    return ctx.json({ ciphertext: burned.ciphertext, iv: burned.iv, score: burned.score })
+    return ctx.json(burned)
   })
 
   return app

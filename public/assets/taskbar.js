@@ -1,5 +1,3 @@
-import { formatXp, rankFor } from './xp.js'
-
 const CLOCK_MS = 15000
 
 let started = false
@@ -21,22 +19,12 @@ export function initTaskbar() {
     window.setInterval(() => paintClock(clock), CLOCK_MS)
   }
 
+  // counter.js dispatches the first stats event, so there is nothing to paint
+  // here on load.
   window.addEventListener('stats', (event) => {
-    const { xp, burned } = event.detail
-    const rank = rankFor(xp)
-
-    set('taskbar-xp', `${formatXp(xp)} XP`)
-    set('taskbar-level', `LV ${rank.level}`)
-    set('taskbar-rank', rank.name)
-    set('taskbar-burned', String(burned).padStart(6, '0'))
+    const node = document.getElementById('taskbar-burned')
+    if (node !== null) node.textContent = String(event.detail.burned).padStart(6, '0')
   })
-
-  // counter.js dispatches the first stats event, so nothing to paint here.
-}
-
-function set(id, value) {
-  const node = document.getElementById(id)
-  if (node !== null) node.textContent = value
 }
 
 // Every page shows the taskbar, so it wires itself up on load.

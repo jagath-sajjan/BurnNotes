@@ -1,16 +1,16 @@
 import { prefersReducedMotion } from './dom.js'
 
 const STORAGE_KEY = 'burnnotes.booted'
-const LINE_MS = 200
-const HOLD_MS = 90
+const SPLASH_MS = 2600
+const FADE_MS = 420
 
-const LINES = [
-  'BURNNOTES 1.0',
-  'CHECKING CIPHER SUITE ......... AES-256-GCM',
-  'MOUNTING KEY VAULT ............ OK',
-  'WIPING CLIPBOARD .............. SKIPPED',
-  'READY.',
-]
+const MARQUEE =
+  'BurnNotes ' +
+  'seals the text in your browser ' +
+  'sends only locked bytes to the server ' +
+  'destroys the row on first read ' +
+  'the key never leaves the link ' +
+  'BurnNotes '
 
 function sessionSeen() {
   try {
@@ -24,7 +24,7 @@ function markSeen() {
   try {
     window.sessionStorage.setItem(STORAGE_KEY, '1')
   } catch {
-    // Private browsing. The boot screen simply shows again.
+    // Private browsing. The splash simply shows again.
   }
 }
 
@@ -38,41 +38,21 @@ export async function runBoot() {
   const overlay = document.getElementById('boot')
   if (overlay === null) return
 
-  if (sessionSeen()) {
+  if (sessionSeen() || prefersReducedMotion()) {
     overlay.remove()
     return
   }
   markSeen()
 
-  const stream = document.getElementById('boot-log')
-  const bar = document.getElementById('boot-bar')
-  const quick = prefersReducedMotion()
-
-  for (let index = 0; index < LINES.length; index += 1) {
-    const line = document.createElement('p')
-    line.className = 'boot-line'
-    line.textContent = LINES[index]
-    stream.append(line)
-    bar.style.setProperty('--progress', `${Math.round(((index + 1) / LINES.length) * 100)}%`)
-
-    if (quick) {
-      await wait(40)
-      continue
-    }
-
-    // Type the line out one character at a time. Every line gets the same
-    // budget so the total time in here stays predictable.
-    const text = LINES[index]
-    const step = LINE_MS / text.length
-    line.textContent = ''
-    for (let cursor = 0; cursor < text.length; cursor += 1) {
-      line.textContent = text.slice(0, cursor + 1)
-      await wait(step)
-    }
-    await wait(HOLD_MS)
+  const track = overlay.querySelector('.boot-marquee-text')
+  if (track !== null) {
+    // Two copies so the loop has no visible seam.
+    track.textContent = `${MARQUEE}${MARQUEE}`
   }
 
+  await wait(SPLASH_MS)
+
   overlay.classList.add('leaving')
-  await wait(quick ? 60 : 420)
+  await wait(FADE_MS)
   overlay.remove()
 }

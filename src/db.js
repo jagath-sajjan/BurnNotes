@@ -21,8 +21,6 @@ export const SCHEMA_STATEMENTS = [
    )`,
   'CREATE INDEX IF NOT EXISTS notes_expires_at_idx ON notes (expires_at)',
   `INSERT OR IGNORE INTO stats (key, value) VALUES ('burned', 0)`,
-  `INSERT OR IGNORE INTO stats (key, value) VALUES ('xp', 0)`,
-  `INSERT OR IGNORE INTO stats (key, value) VALUES ('chars', 0)`,
 ]
 
 // Older databases predate the burn_mode column. CREATE TABLE IF NOT EXISTS
