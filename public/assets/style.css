@@ -64,7 +64,9 @@ body {
 .title-text {
   flex: 1 1 auto;
   min-width: 0;
+  margin: 0;
   overflow: hidden;
+  font-size: inherit;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

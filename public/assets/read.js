@@ -124,6 +124,7 @@ async function burnAndReveal() {
     show(reveal, true)
     show(burnedNotice, false)
     show(readError, true)
+    show(doneButton, true)
     return
   }
 
@@ -142,6 +143,7 @@ async function burnAndReveal() {
   show(noteText, false)
   show(progress, false)
   show(burnedNotice, true)
+  show(doneButton, true)
   refreshCounter()
   doneButton.focus()
 }
